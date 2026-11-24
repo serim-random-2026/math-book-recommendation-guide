@@ -1,17 +1,30 @@
-# 1. [입력 화면] 제일 먼저 실행
-print("=" * 46)
-print("\n(1) 현재 학년 학기 선택 => [ 1학년 / 2학년 / 3학년 ], [ 1학기 / 2학기 ]")
-year = input("    ▶ 학년 선택 (1학년/2학년/3학년): ")
-semester = input("    ▶ 학기 선택 (1학기/2학기): ")
+import pandas as pd
+import streamlit as st
+
+# 페이지 기본 설정
+st.set_page_config(page_title="성적 분석 및 교재 추천", page_icon="📚")
+st.title("📚 맞춤형 교육 자료 추천 프로그램")
+
+# ---------------------------------------------------------
+# 1. [입력 화면] input() -> Streamlit 입력 위젯으로 변경
+# ---------------------------------------------------------
+st.subheader("1. 현재 학년 및 학기 선택")
+col1, col2 = st.columns(2)
+with col1:
+  year = st.selectbox("학년 선택", ["1학년", "2학년", "3학년"])
+with col2:
+  semester = st.selectbox("학기 선택", ["1학기", "2학기"])
+
 old = f"{year} {semester}"
 
-print("\n(2) 최근 지필 성적 입력 => ( 숫자 ) 점")
-grade = int(input("    ▶ 점수 입력: "))
+st.subheader("2. 최근 지필 성적 입력")
+grade = st.number_input(
+    "점수 입력 (0 ~ 100점)", min_value=0, max_value=100, value=75, step=1
+)
 
-input("\n[버튼; 분석하기] (실행하려면 Enter 키를 누르세요)")
-
-
+# ---------------------------------------------------------
 # 2. 난이도별 추천 교육 자료 리스트 & 추천 이유 매칭
+# ---------------------------------------------------------
 easy_problem = ["개념원리", "RPM", "연산"]
 middle_problem = ["풍산자", "고쟁이", "쎈"]
 hard_problem = ["올림포스", "블랙라벨", "마더텅"]
@@ -29,15 +42,17 @@ reasons = {
 }
 
 
-# 3. 성적 분석 및 테이블 데이터 변환 함수 정의
+# ---------------------------------------------------------
+# 3. 성적 분석 및 테이블 출력 함수 정의
+# ---------------------------------------------------------
 def easy_hard(old, grade):
-  print("\n" + "=" * 46)
-  print("\n[결과 출력 화면]")
+  st.divider()
+  st.subheader(f"📊 분석 결과 ({old} / {grade}점)")
 
   # 40점 이하 조건 처리
   if grade <= 40:
-    print("\n예전 개념부터 복습하고 나서 풀어보세요.")
-    print("\n총 난이도=> 기초 복습 필요")
+    st.warning("예전 개념부터 복습하고 나서 풀어보세요.")
+    st.info("**총 난이도 => 기초 복습 필요**")
     return
 
   # 60점, 80점, 100점 이하 조건 분기
@@ -47,33 +62,21 @@ def easy_hard(old, grade):
   elif grade <= 80:
     level = "중"
     target_list = middle_problem
-  elif grade <= 100:
+  else:
     level = "상"
     target_list = hard_problem
-  else:
-    print("\n점수는 0~100 사이로 입력해주세요.")
-    return
 
-  # [핵심] for 반복문으로 교육 자료 리스트를 순회하며 테이블 생성용 데이터(2차원 리스트)로 변환
-  table_data = []
-  for book in target_list:
-    row = [book, reasons[book]]
-    table_data.append(row)
+  # 2차원 리스트 생성 후 데이터프레임으로 변환하여 깔끔한 웹 표로 출력
+  table_data = [[book, reasons[book]] for book in target_list]
+  df = pd.DataFrame(table_data, columns=["교육 자료", "추천 이유"])
 
-  # 변환된 테이블 데이터를 순회하여 출력
-  print("\n당신에게 추천하는 교육 자료입니다.\n")
-  print(f"{'추천하는 교육 자료 목록 = ':<24} +------------+----------------------------------+")
-  print(f"{'':<24} | {'교육 자료':<8} | {'추천 이유':<30} |")
-  print(f"{'':<24} +------------+----------------------------------+")
-
-  for row in table_data:
-    book_name = row[0]
-    book_reason = row[1]
-    print(f"{'':<24} | {book_name:<8} | {book_reason:<30} |")
-
-  print(f"{'':<24} +------------+----------------------------------+")
-  print(f"\n총 난이도=> {level}")
+  st.write("당신에게 추천하는 교육 자료입니다.")
+  st.table(df)
+  st.success(f"**총 난이도 => {level}**")
 
 
-# 4. 함수 실행
-easy_hard(old, grade)
+# ---------------------------------------------------------
+# 4. [버튼; 분석하기] 클릭 시 함수 실행
+# ---------------------------------------------------------
+if st.button("분석하기", type="primary", use_container_width=True):
+  easy_hard(old, grade)
